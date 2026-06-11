@@ -1,26 +1,439 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
-    <title>BOCW Scanner</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOCW Worker Data Scanner - Advanced</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; text-align: center; }
+        .header h1 { font-size: 28px; }
+        .controls { padding: 25px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; }
+        .range-group { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+        .input-group { flex: 1; min-width: 200px; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .input-group input { width: 100%; padding: 10px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .button-group { display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap; }
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #667eea; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+        .progress-bar-container { background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 15px 0; }
+        .progress-bar { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 30px; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
+        .search-section { padding: 20px; background: white; border-bottom: 1px solid #e0e0e0; }
+        .search-box { display: flex; gap: 15px; flex-wrap: wrap; margin: 15px 0; }
+        .search-box input, .search-box select { padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .search-box input { flex: 2; }
+        .search-box select { flex: 1; }
+        .search-box button { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .results-table { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 13px; }
+        th { background: #667eea; color: white; position: sticky; top: 0; }
+        tr:hover { background: #f5f5f5; }
+        .pagination { display: flex; justify-content: center; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
+        .pagination button { padding: 8px 15px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .console-section { background: #1e1e1e; color: #d4d4d4; padding: 20px; font-family: monospace; }
+        .console-output { background: #0a0a0a; height: 200px; overflow-y: auto; padding: 15px; border-radius: 8px; font-size: 12px; }
+        .console-output .error { color: #f48771; }
+        .console-output .success { color: #6a9955; }
+        .console-output .info { color: #9cdcfe; }
+        .console-output .warning { color: #dcdcaa; }
+        .hidden-control { position: fixed; bottom: 10px; right: 10px; opacity: 0.1; transition: opacity 0.3s; z-index: 999; }
+        .hidden-control:hover { opacity: 1; }
+        .control-panel { display: none; position: fixed; bottom: 60px; right: 10px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 1000; width: 280px; }
+        .control-panel.show { display: block; }
+        .control-panel input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; }
+        .control-panel button { width: 100%; margin: 5px 0; padding: 8px; }
+        @media (max-width: 768px) { .range-group { flex-direction: column; } .button-group { flex-direction: column; } }
+    </style>
 </head>
 <body>
-    <h1>BOCW Worker Scanner is Running...</h1>
-    <p>Status: Active</p>
-    <pre id="status">Loading...</pre>
+<div class="container">
+    <div class="header">
+        <h1>🔍 BOCW Worker Data Scanner - Advanced</h1>
+        <p>Auto Scan | Real-time Monitoring | Search by ID/Aadhaar/RegNo | Auto Retry 5x</p>
+    </div>
     
-    <script>
-        async function updateStatus() {
-            try {
-                const response = await fetch('/scan_status.json');
-                const data = await response.json();
-                document.getElementById('status').innerHTML = JSON.stringify(data, null, 2);
-            } catch(e) {
-                document.getElementById('status').innerHTML = 'Waiting for scan to start...';
+    <div class="controls">
+        <div class="range-group">
+            <div class="input-group"><label>📊 Start ID</label><input type="number" id="startId" value="4885000"></div>
+            <div class="input-group"><label>📊 End ID</label><input type="number" id="endId" value="4935000"></div>
+            <div class="input-group"><label>⚡ Batch Size</label><input type="number" id="batchSize" value="50" min="1" max="200"></div>
+            <div class="input-group"><label>🔄 Max Retries</label><input type="number" id="maxRetries" value="5" min="1" max="10"></div>
+        </div>
+        <div class="button-group">
+            <button class="btn btn-primary" id="startScan">▶️ Start Scan</button>
+            <button class="btn btn-danger" id="stopScan" disabled>⏹️ Stop Scan</button>
+            <button class="btn btn-success" id="downloadCSV" disabled>📥 Download CSV</button>
+            <button class="btn btn-success" id="downloadJSON" disabled>📥 Download JSON</button>
+            <button class="btn btn-secondary" id="clearConsole">🗑️ Clear Console</button>
+        </div>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-card"><div class="stat-value" id="scannedCount">0</div><div class="stat-label">Scanned IDs</div></div>
+        <div class="stat-card"><div class="stat-value" id="validCount">0</div><div class="stat-label">Valid Workers</div></div>
+        <div class="stat-card"><div class="stat-value" id="failedCount">0</div><div class="stat-label">Failed IDs</div></div>
+        <div class="stat-card"><div class="stat-value" id="retrySuccessCount">0</div><div class="stat-label">Retry Success</div></div>
+        <div class="stat-card"><div class="stat-value" id="currentId">-</div><div class="stat-label">Current ID</div></div>
+        <div class="stat-card"><div class="stat-value" id="progressPercent">0%</div><div class="stat-label">Progress</div></div>
+    </div>
+    
+    <div class="progress-bar-container"><div class="progress-bar" id="progressBar">0%</div></div>
+    
+    <div class="search-section">
+        <h3>🔍 Search Worker</h3>
+        <div class="search-box">
+            <select id="searchType"><option value="id">User ID</option><option value="aadhaar">Aadhaar Number</option><option value="regNo">Registration No</option><option value="name">Name</option><option value="mobile">Mobile No</option></select>
+            <input type="text" id="searchValue" placeholder="Enter value to search...">
+            <button id="searchBtn">🔎 Search</button>
+            <button id="resetSearchBtn" style="background:#6c757d;">🔄 Reset</button>
+        </div>
+        <div class="results-table">
+            <table id="dataTable"><thead><tr><th>ID</th><th>Name</th><th>Father's Name</th><th>Aadhaar</th><th>Mobile</th><th>Reg No</th><th>District</th></tr></thead><tbody id="tableBody"><tr><td colspan="7">Loading... Start scan to collect data</td></tr></tbody></table>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+    
+    <div class="console-section">
+        <h3>📟 Live Console</h3>
+        <div class="console-output" id="consoleOutput"><div class="info">✅ System Ready</div><div class="success">🚀 Advanced Scanner Active</div></div>
+    </div>
+</div>
+
+<div class="hidden-control"><button id="adminBtn" style="background:#dc3545; width:40px; height:40px; border-radius:50%; font-size:20px;">⚙️</button></div>
+<div class="control-panel" id="adminPanel"><h4>🔐 Admin Control</h4><input type="password" id="adminPass" placeholder="Password"><button id="adminLogin">Login</button><div id="adminTools" style="display:none; margin-top:10px;"><button id="forceStartBtn" style="background:#28a745;">▶️ Force Start</button><button id="forceStopBtn" style="background:#dc3545;">⏹️ Force Stop</button><button id="resetDataBtn" style="background:#ffc107;">🗑️ Reset All Data</button><hr><label>New Start ID: <input type="number" id="newStartId" style="width:100%"></label><label>New End ID: <input type="number" id="newEndId" style="width:100%"></label><button id="updateRangeBtn">Update Range</button></div></div>
+
+<script>
+    // Configuration
+    const API_BASE = '';
+    let allWorkers = [];
+    let failedIds = [];
+    let retrySuccessIds = [];
+    let scanned = 0;
+    let isRunning = false;
+    let currentStartId = 4885000;
+    let currentEndId = 4935000;
+    let currentBatchSize = 50;
+    let maxRetries = 5;
+    let currentId = currentStartId;
+    let startTime = 0;
+    let currentPage = 1;
+    const itemsPerPage = 50;
+    
+    // DOM Elements
+    const startBtn = document.getElementById('startScan');
+    const stopBtn = document.getElementById('stopScan');
+    const downloadCSVBtn = document.getElementById('downloadCSV');
+    const downloadJSONBtn = document.getElementById('downloadJSON');
+    const clearConsoleBtn = document.getElementById('clearConsole');
+    const progressBar = document.getElementById('progressBar');
+    const scannedCountEl = document.getElementById('scannedCount');
+    const validCountEl = document.getElementById('validCount');
+    const failedCountEl = document.getElementById('failedCount');
+    const retrySuccessCountEl = document.getElementById('retrySuccessCount');
+    const currentIdEl = document.getElementById('currentId');
+    const progressPercentEl = document.getElementById('progressPercent');
+    const consoleOutput = document.getElementById('consoleOutput');
+    const tableBody = document.getElementById('tableBody');
+    const searchType = document.getElementById('searchType');
+    const searchValue = document.getElementById('searchValue');
+    const searchBtn = document.getElementById('searchBtn');
+    const resetSearchBtn = document.getElementById('resetSearchBtn');
+    
+    function addLog(msg, type = 'info') {
+        const time = new Date().toLocaleTimeString();
+        const colorClass = type;
+        consoleOutput.innerHTML += `<div class="${colorClass}">[${time}] ${msg}</div>`;
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        while(consoleOutput.children.length > 100) consoleOutput.removeChild(consoleOutput.firstChild);
+    }
+    
+    function updateStats() {
+        const total = currentEndId - currentStartId + 1;
+        const percent = total > 0 ? ((currentId - currentStartId) / total * 100) : 0;
+        progressBar.style.width = Math.min(percent, 100) + '%';
+        progressBar.textContent = Math.round(percent) + '%';
+        progressPercentEl.textContent = Math.round(percent) + '%';
+        scannedCountEl.textContent = scanned;
+        validCountEl.textContent = allWorkers.length;
+        failedCountEl.textContent = failedIds.length;
+        retrySuccessCountEl.textContent = retrySuccessIds.length;
+        currentIdEl.textContent = currentId;
+        saveToLocal();
+    }
+    
+    function saveToLocal() {
+        localStorage.setItem('allWorkers', JSON.stringify(allWorkers));
+        localStorage.setItem('failedIds', JSON.stringify(failedIds));
+        localStorage.setItem('retrySuccessIds', JSON.stringify(retrySuccessIds));
+        localStorage.setItem('scanned', scanned);
+        localStorage.setItem('currentId', currentId);
+        localStorage.setItem('isRunning', isRunning);
+    }
+    
+    function loadFromLocal() {
+        const savedWorkers = localStorage.getItem('allWorkers');
+        const savedFailed = localStorage.getItem('failedIds');
+        const savedRetry = localStorage.getItem('retrySuccessIds');
+        const savedScanned = localStorage.getItem('scanned');
+        const savedCurrentId = localStorage.getItem('currentId');
+        
+        if(savedWorkers) allWorkers = JSON.parse(savedWorkers);
+        if(savedFailed) failedIds = JSON.parse(savedFailed);
+        if(savedRetry) retrySuccessIds = JSON.parse(savedRetry);
+        if(savedScanned) scanned = parseInt(savedScanned);
+        if(savedCurrentId) currentId = parseInt(savedCurrentId);
+        
+        addLog(`📀 Loaded ${allWorkers.length} records from storage`, 'info');
+        updateStats();
+        displayTable();
+    }
+    
+    async function fetchWorker(uid, attempt = 1) {
+        try {
+            const res = await fetch(`https://bocwboard.bihar.gov.in/api/workers/generalInfoUserView/${uid}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.applicantName) {
+                    return { success: true, data: { id: uid, name: data.applicantName || 'N/A', father: data.fatherHusband || 'N/A', aadhaar: data.aadhaarCardNumber || 'N/A', mobile: data.mobileNo || 'N/A', regNo: data.registrationNo || 'N/A', district: data.districtEnglish || 'N/A', address: (data.permanentAddress || 'N/A').replace(/\n/g, ' '), status: data.formNumber || 'Active' } };
+                }
+            }
+            if (attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, 2000));
+                return await fetchWorker(uid, attempt + 1);
+            }
+            return { success: false, id: uid };
+        } catch(e) {
+            if (attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, 2000));
+                return await fetchWorker(uid, attempt + 1);
+            }
+            return { success: false, id: uid };
+        }
+    }
+    
+    async function scanBatch() {
+        while (isRunning && currentId <= currentEndId) {
+            addLog(`🔍 Scanning ID: ${currentId}`, 'info');
+            const result = await fetchWorker(currentId);
+            scanned++;
+            
+            if (result.success) {
+                allWorkers.push(result.data);
+                addLog(`✅ ID ${currentId} - ${result.data.name}`, 'success');
+            } else {
+                failedIds.push(currentId);
+                addLog(`❌ ID ${currentId} - Failed`, 'error');
+            }
+            
+            updateStats();
+            displayTable();
+            
+            if (allWorkers.length % 50 === 0 && allWorkers.length > 0) {
+                addLog(`📊 Progress: ${allWorkers.length} workers found so far`, 'info');
+            }
+            
+            currentId++;
+            await new Promise(r => setTimeout(r, 1500));
+        }
+        
+        if (isRunning && failedIds.length > 0) {
+            addLog(`🔄 Retrying ${failedIds.length} failed IDs...`, 'warning');
+            await retryFailed();
+        }
+        
+        if (isRunning) {
+            addLog(`✅ SCAN COMPLETE! Total: ${allWorkers.length} workers`, 'success');
+            downloadCSVBtn.disabled = false;
+            downloadJSONBtn.disabled = false;
+        }
+        isRunning = false;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+    }
+    
+    async function retryFailed() {
+        const stillFailed = [];
+        let recovered = 0;
+        
+        for (const uid of failedIds) {
+            if (!isRunning) break;
+            addLog(`🔄 Retrying ID ${uid}...`, 'retry');
+            const result = await fetchWorker(uid);
+            if (result.success) {
+                allWorkers.push(result.data);
+                retrySuccessIds.push(uid);
+                recovered++;
+                addLog(`✅ Recovered ID ${uid}`, 'success');
+            } else {
+                stillFailed.push(uid);
+            }
+            await new Promise(r => setTimeout(r, 1000));
+        }
+        
+        failedIds = stillFailed;
+        updateStats();
+        addLog(`✅ Retry complete! Recovered: ${recovered}, Still failed: ${failedIds.length}`, 'info');
+    }
+    
+    async function startScan() {
+        if (isRunning) { addLog('⚠️ Scan already running!', 'warning'); return; }
+        
+        currentStartId = parseInt(document.getElementById('startId').value);
+        currentEndId = parseInt(document.getElementById('endId').value);
+        currentBatchSize = parseInt(document.getElementById('batchSize').value);
+        maxRetries = parseInt(document.getElementById('maxRetries').value);
+        
+        if (currentStartId > currentEndId) { addLog('❌ Invalid range!', 'error'); return; }
+        
+        allWorkers = [];
+        failedIds = [];
+        retrySuccessIds = [];
+        scanned = 0;
+        currentId = currentStartId;
+        isRunning = true;
+        startTime = Date.now();
+        
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        downloadCSVBtn.disabled = true;
+        downloadJSONBtn.disabled = true;
+        
+        addLog('🚀 SCAN STARTED!', 'success');
+        addLog(`📊 Range: ${currentStartId} to ${currentEndId}`, 'info');
+        addLog(`⚡ Batch Size: ${currentBatchSize}`, 'info');
+        addLog(`🔄 Max Retries: ${maxRetries}`, 'info');
+        
+        updateStats();
+        scanBatch();
+    }
+    
+    function stopScan() {
+        if (isRunning) {
+            isRunning = false;
+            addLog('⏹️ Scan stopped by user', 'warning');
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            if (allWorkers.length > 0) {
+                downloadCSVBtn.disabled = false;
+                downloadJSONBtn.disabled = false;
             }
         }
-        updateStatus();
-        setInterval(updateStatus, 5000);
-    </script>
+    }
+    
+    function downloadCSV() {
+        if (allWorkers.length === 0) { addLog('❌ No data to download!', 'error'); return; }
+        const headers = ['S.No', 'User ID', 'Name', 'Father/Husband', 'Aadhaar', 'Mobile', 'Registration No', 'Address', 'District', 'Status'];
+        const rows = allWorkers.map((w, i) => [i+1, w.id, `"${w.name.replace(/"/g, '""')}"`, `"${w.father.replace(/"/g, '""')}"`, `"${w.aadhaar}"`, `"${w.mobile}"`, `"${w.regNo}"`, `"${w.address?.replace(/"/g, '""') || 'N/A'}"`, `"${w.district}"`, `"${w.status}"`]);
+        let csv = headers.join(',') + '\n' + rows.map(r => r.join(',')).join('\n');
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bocw_data_${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addLog(`📥 CSV Downloaded! ${allWorkers.length} records`, 'success');
+    }
+    
+    function downloadJSON() {
+        if (allWorkers.length === 0) { addLog('❌ No data to download!', 'error'); return; }
+        const blob = new Blob([JSON.stringify(allWorkers, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bocw_data_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addLog(`📥 JSON Downloaded! ${allWorkers.length} records`, 'success');
+    }
+    
+    function displayTable() {
+        let dataToShow = allWorkers;
+        const start = (currentPage - 1) * itemsPerPage;
+        const pageData = dataToShow.slice(start, start + itemsPerPage);
+        
+        if (pageData.length === 0) { tableBody.innerHTML = '<tr><td colspan="7">No records found</td></tr>'; return; }
+        
+        tableBody.innerHTML = pageData.map(w => `<tr><td>${w.id}</td><td>${w.name}</td><td>${w.father}</td><td>${w.aadhaar}</td><td>${w.mobile}</td><td>${w.regNo}</td><td>${w.district}</td></tr>`).join('');
+        
+        const totalPages = Math.ceil(dataToShow.length / itemsPerPage);
+        let paginationHtml = '';
+        for (let i = 1; i <= Math.min(totalPages, 10); i++) paginationHtml += `<button onclick="goToPage(${i})" ${i === currentPage ? 'style="background:#764ba2;"' : ''}>${i}</button>`;
+        document.getElementById('pagination').innerHTML = paginationHtml;
+    }
+    
+    function searchWorker() {
+        const type = searchType.value;
+        const value = searchValue.value.trim().toLowerCase();
+        if (!value) { displayTable(); return; }
+        
+        let filtered = allWorkers.filter(w => {
+            if (type === 'id') return w.id == value;
+            if (type === 'aadhaar') return w.aadhaar && w.aadhaar.includes(value);
+            if (type === 'regNo') return w.regNo && w.regNo.toLowerCase().includes(value);
+            if (type === 'name') return w.name && w.name.toLowerCase().includes(value);
+            if (type === 'mobile') return w.mobile && w.mobile.includes(value);
+            return false;
+        });
+        
+        if (filtered.length > 0) {
+            tableBody.innerHTML = filtered.slice(0, 100).map(w => `<tr><td>${w.id}</td><td>${w.name}</td><td>${w.father}</td><td>${w.aadhaar}</td><td>${w.mobile}</td><td>${w.regNo}</td><td>${w.district}</td></tr>`).join('');
+            addLog(`🔍 Found ${filtered.length} results`, 'success');
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="7">❌ No results found</td></tr>';
+            addLog(`❌ No results for ${type}: ${value}`, 'error');
+        }
+    }
+    
+    function resetSearch() { searchValue.value = ''; displayTable(); addLog('🔄 Search reset', 'info'); }
+    function goToPage(page) { currentPage = page; displayTable(); }
+    function clearConsole() { consoleOutput.innerHTML = '<div class="info">✅ Console cleared</div>'; }
+    
+    // Admin Panel
+    const adminBtn = document.getElementById('adminBtn');
+    const adminPanel = document.getElementById('adminPanel');
+    const adminLogin = document.getElementById('adminLogin');
+    const adminPass = document.getElementById('adminPass');
+    const adminTools = document.getElementById('adminTools');
+    const ADMIN_PASSWORD = "8809219140";
+    
+    adminBtn.addEventListener('click', () => adminPanel.classList.toggle('show'));
+    adminLogin.addEventListener('click', () => {
+        if (adminPass.value === ADMIN_PASSWORD) {
+            adminTools.style.display = 'block';
+            adminLogin.style.display = 'none';
+            addLog('🔐 Admin access granted', 'success');
+        } else { alert('Wrong password!'); }
+    });
+    document.getElementById('forceStartBtn')?.addEventListener('click', startScan);
+    document.getElementById('forceStopBtn')?.addEventListener('click', stopScan);
+    document.getElementById('resetDataBtn')?.addEventListener('click', () => { if(confirm('Reset all data?')) { localStorage.clear(); location.reload(); } });
+    
+    // Event Listeners
+    startBtn.addEventListener('click', startScan);
+    stopBtn.addEventListener('click', stopScan);
+    downloadCSVBtn.addEventListener('click', downloadCSV);
+    downloadJSONBtn.addEventListener('click', downloadJSON);
+    clearConsoleBtn.addEventListener('click', clearConsole);
+    searchBtn.addEventListener('click', searchWorker);
+    resetSearchBtn.addEventListener('click', resetSearch);
+    searchValue.addEventListener('keypress', (e) => { if(e.key === 'Enter') searchWorker(); });
+    
+    loadFromLocal();
+    window.goToPage = goToPage;
+    addLog('🚀 Advanced Scanner Ready!', 'success');
+</script>
 </body>
 </html>
