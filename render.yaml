@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: bocw-scanner
+    runtime: python
+    buildCommand: ""
+    startCommand: "python scanner.py"
+    plan: free

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BOCW Scanner</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>BOCW Worker Scanner is Running...</h1>
+    <p>Status: Active</p>
+    <pre id="status">Loading...</pre>
+    
+    <script>
+        async function updateStatus() {
+            try {
+                const response = await fetch('/scan_status.json');
+                const data = await response.json();
+                document.getElementById('status').innerHTML = JSON.stringify(data, null, 2);
+            } catch(e) {
+                document.getElementById('status').innerHTML = 'Waiting for scan to start...';
+            }
+        }
+        updateStatus();
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>
