@@ -1,3 +1,7 @@
-flask==3.0.0
-requests==2.31.0
-gunicorn==21.2.0
+services:
+  - type: web
+    name: bocw-scanner
+    runtime: python3
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    plan: free
