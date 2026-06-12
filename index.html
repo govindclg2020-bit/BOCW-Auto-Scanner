@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOCW Worker Data Scanner</title>
+    <title>BOCW Worker Data Scanner - Public View</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
@@ -27,16 +27,9 @@
         tr:hover { background: #f5f5f5; }
         .pagination { display: flex; justify-content: center; gap: 10px; margin: 20px; flex-wrap: wrap; }
         .pagination button { padding: 8px 15px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .console-section { background: #1e1e1e; color: #d4d4d4; padding: 20px; font-family: monospace; }
-        .console-output { background: #0a0a0a; height: 200px; overflow-y: auto; padding: 15px; border-radius: 8px; font-size: 12px; }
-        .console-output .error { color: #f48771; }
-        .console-output .success { color: #6a9955; }
-        .console-output .info { color: #9cdcfe; }
-        .console-output .warning { color: #dcdcaa; }
-        .console-output .retry { color: #ce9178; }
-        .admin-link { text-align: center; padding: 10px; background: #f8f9fa; font-size: 12px; }
-        .admin-link a { color: #667eea; text-decoration: none; cursor: pointer; }
-        .admin-link a:hover { text-decoration: underline; }
+        .info-note { background: #e8f4fd; padding: 10px 20px; margin: 0 20px 20px 20px; border-radius: 8px; font-size: 13px; color: #0c5460; }
+        .admin-link { text-align: center; padding: 15px; background: #f8f9fa; font-size: 12px; border-top: 1px solid #e0e0e0; }
+        .admin-link a { color: #667eea; text-decoration: none; }
         @media (max-width: 768px) { .stats { grid-template-columns: repeat(2, 1fr); } .search-box { flex-direction: column; } }
     </style>
 </head>
@@ -44,22 +37,25 @@
 <div class="container">
     <div class="header">
         <h1>🔍 BOCW Worker Data Scanner</h1>
-        <p>Real-time Monitoring | Search by ID/Aadhaar/RegNo | Auto Retry 2x | Ultra Fast Batch Mode</p>
+        <p>Real-time Monitoring | Search by ID/Aadhaar/RegNo | Auto Retry 2x | Permanent Data Storage</p>
     </div>
     
     <div class="stats">
         <div class="stat-card"><div class="stat-value" id="currentId">-</div><div class="stat-label">Current Scanning ID</div></div>
         <div class="stat-card"><div class="stat-value" id="scannedCount">0</div><div class="stat-label">Scanned IDs</div></div>
-        <div class="stat-card"><div class="stat-value" id="validCount">0</div><div class="stat-label">Valid Workers</div></div>
-        <div class="stat-card"><div class="stat-value" id="failedCount">0</div><div class="stat-label">Failed (Will Retry)</div></div>
-        <div class="stat-card"><div class="stat-value" id="retryCount">0</div><div class="stat-label">Retry Success</div></div>
+        <div class="stat-card"><div class="stat-value" id="validCount">0</div><div class="stat-label">Valid Workers Found</div></div>
         <div class="stat-card"><div class="stat-value" id="progressPercent">0%</div><div class="stat-label">Progress</div></div>
     </div>
     
     <div class="progress-container"><div class="progress-bar" id="progressBar">0%</div></div>
     
+    <div class="info-note">
+        📌 <strong>Note:</strong> Scanned data is permanently saved. Stop/Start has no effect on already collected data.
+        🔄 Failed IDs automatically retry 2 times. ⚡ Ultra fast: 100 IDs per batch.
+    </div>
+    
     <div class="search-section">
-        <h3>🔍 Search Worker</h3>
+        <h3>🔍 Search Worker (In Collected Data)</h3>
         <div class="search-box">
             <select id="searchType">
                 <option value="id">User ID</option>
@@ -73,68 +69,36 @@
             <button id="resetSearchBtn">🔄 Reset</button>
         </div>
         <div class="results-table">
-            <table id="dataTable"><thead><tr><th>ID</th><th>Name</th><th>Father's Name</th><th>Aadhaar</th><th>Mobile</th><th>Reg No</th><th>District</th></tr></thead><tbody id="tableBody"><tr><td colspan="7">Loading...<td></tr></tbody></table>
+            <table id="dataTable"><thead><tr><th>ID</th><th>Name</th><th>Father's Name</th><th>Aadhaar</th><th>Mobile</th><th>Reg No</th><th>District</th></tr></thead><tbody id="tableBody"><tr><td colspan="7">Loading...正在获取数据...</td></tr></tbody>
+            </table>
             <div class="pagination" id="pagination"></div>
         </div>
     </div>
     
-    <div class="console-section">
-        <h3>📟 Live Console</h3>
-        <div class="console-output" id="consoleOutput"><div class="info">✅ System Ready</div><div class="info">🔄 Auto Retry: Failed IDs will retry 2 times automatically</div><div class="info">⚡ Ultra Fast Mode: 100 IDs per batch</div></div>
+    <div class="admin-link">
+        🔐 <a href="/admin" target="_blank">Admin Control Panel</a> - For authorized access only
     </div>
-    
-    <div class="admin-link"><a id="adminLink">🔐 Admin Control Panel (Click Here)</a></div>
 </div>
 
 <script>
-    // Configuration
-    const API_BASE = '';
     let allWorkers = [];
     let currentPage = 1;
     const itemsPerPage = 50;
-    let refreshInterval = null;
-    
-    // DOM Elements
-    const currentIdEl = document.getElementById('currentId');
-    const scannedCountEl = document.getElementById('scannedCount');
-    const validCountEl = document.getElementById('validCount');
-    const failedCountEl = document.getElementById('failedCount');
-    const retryCountEl = document.getElementById('retryCount');
-    const progressPercentEl = document.getElementById('progressPercent');
-    const progressBar = document.getElementById('progressBar');
-    const consoleOutput = document.getElementById('consoleOutput');
-    const tableBody = document.getElementById('tableBody');
-    const searchType = document.getElementById('searchType');
-    const searchValue = document.getElementById('searchValue');
-    const searchBtn = document.getElementById('searchBtn');
-    const resetSearchBtn = document.getElementById('resetSearchBtn');
-    const adminLink = document.getElementById('adminLink');
-    
-    function addLog(msg, type = 'info') {
-        const time = new Date().toLocaleTimeString();
-        consoleOutput.innerHTML += `<div class="${type}">[${time}] ${msg}</div>`;
-        consoleOutput.scrollTop = consoleOutput.scrollHeight;
-        while(consoleOutput.children.length > 100) consoleOutput.removeChild(consoleOutput.firstChild);
-    }
     
     async function fetchStatus() {
         try {
             const res = await fetch('/api/status?t=' + Date.now());
             if (res.ok) {
                 const data = await res.json();
-                currentIdEl.textContent = data.current_id?.toLocaleString() || '-';
-                scannedCountEl.textContent = data.scanned_count?.toLocaleString() || '0';
-                validCountEl.textContent = data.total_found?.toLocaleString() || '0';
-                failedCountEl.textContent = data.failed_count?.toLocaleString() || '0';
-                retryCountEl.textContent = data.retry_success?.toLocaleString() || '0';
+                document.getElementById('currentId').innerHTML = data.current_id?.toLocaleString() || '-';
+                document.getElementById('scannedCount').innerHTML = data.scanned_count?.toLocaleString() || '0';
+                document.getElementById('validCount').innerHTML = data.total_found?.toLocaleString() || '0';
                 const percent = data.progress || 0;
-                progressPercentEl.textContent = percent + '%';
-                progressBar.style.width = percent + '%';
-                progressBar.textContent = percent + '%';
-                return data;
+                document.getElementById('progressPercent').innerHTML = percent + '%';
+                document.getElementById('progressBar').style.width = percent + '%';
+                document.getElementById('progressBar').textContent = percent + '%';
             }
         } catch(e) { console.log('Status fetch error'); }
-        return null;
     }
     
     async function fetchData() {
@@ -142,17 +106,15 @@
             const res = await fetch('/api/data?t=' + Date.now());
             if (res.ok) {
                 allWorkers = await res.json();
-                validCountEl.textContent = allWorkers.length.toLocaleString();
+                document.getElementById('validCount').innerHTML = allWorkers.length.toLocaleString();
                 displayTable();
-                return true;
             }
         } catch(e) { console.log('Data fetch error'); }
-        return false;
     }
     
     function displayTable() {
         if (!allWorkers || allWorkers.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7">No records found. Scan will start automatically...<td></tr>';
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="7">No data yet. Scanner is running in background...</td></tr>';
             document.getElementById('pagination').innerHTML = '';
             return;
         }
@@ -160,7 +122,17 @@
         const start = (currentPage - 1) * itemsPerPage;
         const pageData = allWorkers.slice(start, start + itemsPerPage);
         
-        tableBody.innerHTML = pageData.map(w => `<tr><td>${w.id}</td><td>${w.name}</td><td>${w.father}</td><td>${w.aadhaar}</td><td>${w.mobile}</td><td>${w.regNo}</td><td>${w.district}</td></tr>`).join('');
+        document.getElementById('tableBody').innerHTML = pageData.map(w => `
+            <tr>
+                <td>${w.id || '-'}</td>
+                <td>${w.name || '-'}</td>
+                <td>${w.father || '-'}</td>
+                <td>${w.aadhaar || '-'}</td>
+                <td>${w.mobile || '-'}</td>
+                <td>${w.regNo || '-'}</td>
+                <td>${w.district || '-'}</td>
+            </tr>
+        `).join('');
         
         const totalPages = Math.ceil(allWorkers.length / itemsPerPage);
         let paginationHtml = '';
@@ -171,8 +143,8 @@
     }
     
     function searchWorker() {
-        const type = searchType.value;
-        const value = searchValue.value.trim().toLowerCase();
+        const type = document.getElementById('searchType').value;
+        const value = document.getElementById('searchValue').value.trim().toLowerCase();
         if (!value) { displayTable(); return; }
         
         let filtered = allWorkers.filter(w => {
@@ -185,36 +157,32 @@
         });
         
         if (filtered.length > 0) {
-            tableBody.innerHTML = filtered.slice(0, 100).map(w => `<tr><td>${w.id}</td><td>${w.name}</td><td>${w.father}</td><td>${w.aadhaar}</td><td>${w.mobile}</td><td>${w.regNo}</td><td>${w.district}</td></tr>`).join('');
-            addLog(`🔍 Found ${filtered.length} results`, 'success');
+            document.getElementById('tableBody').innerHTML = filtered.slice(0, 100).map(w => `
+                <tr><td>${w.id}</td><td>${w.name}</td><td>${w.father}</td><td>${w.aadhaar}</td><td>${w.mobile}</td><td>${w.regNo}</td><td>${w.district}</td></tr>
+            `).join('');
+            document.getElementById('pagination').innerHTML = '';
         } else {
-            tableBody.innerHTML = '<tr><td colspan="7">❌ No results found<td></tr>';
-            addLog(`❌ No results for ${type}: ${value}`, 'error');
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="7">❌ No results found</td></tr>';
         }
     }
     
-    function resetSearch() { searchValue.value = ''; displayTable(); addLog('🔄 Search reset', 'info'); }
+    function resetSearch() {
+        document.getElementById('searchValue').value = '';
+        displayTable();
+    }
+    
     function goToPage(page) { currentPage = page; displayTable(); }
     
-    // Admin Panel - Popup Window
-    adminLink.addEventListener('click', () => {
-        window.open('/admin', '_blank', 'width=500,height=600,scrollbars=yes');
-    });
+    document.getElementById('searchBtn').addEventListener('click', searchWorker);
+    document.getElementById('resetSearchBtn').addEventListener('click', resetSearch);
+    document.getElementById('searchValue').addEventListener('keypress', (e) => { if(e.key === 'Enter') searchWorker(); });
     
-    // Auto refresh every 3 seconds
     setInterval(fetchStatus, 3000);
     setInterval(fetchData, 10000);
     
     fetchStatus();
     fetchData();
     window.goToPage = goToPage;
-    window.searchWorker = searchWorker;
-    window.resetSearch = resetSearch;
-    searchBtn.addEventListener('click', searchWorker);
-    resetSearchBtn.addEventListener('click', resetSearch);
-    searchValue.addEventListener('keypress', (e) => { if(e.key === 'Enter') searchWorker(); });
-    
-    addLog('🚀 Scanner Ready! Auto scan running in background.', 'success');
 </script>
 </body>
 </html>
