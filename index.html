@@ -1,520 +1,521 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html>
 <head>
+    <title>BOCW Worker Search</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOCW Worker Search Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            font-family: 'Courier New', 'Consolas', monospace;
+            background: #ffffff;
             padding: 20px;
         }
-
+        
         .container {
-            max-width: 1300px;
+            max-width: 1400px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
+            border: 1px solid #000000;
+            background: #ffffff;
         }
-
+        
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
+            border-bottom: 2px solid #000000;
+            padding: 20px;
             text-align: center;
-            position: relative;
         }
-
+        
         .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
+            font-size: 24px;
+            font-weight: normal;
         }
-
+        
         .header p {
-            opacity: 0.9;
+            font-size: 12px;
+            margin-top: 5px;
+            color: #444444;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-bottom: 1px solid #cccccc;
+        }
+        
+        .stat-card {
+            padding: 15px;
+            border-right: 1px solid #cccccc;
+            text-align: center;
+        }
+        
+        .stat-card:last-child {
+            border-right: none;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            margin-top: 5px;
+            color: #444444;
+        }
+        
+        .search-section {
+            padding: 20px;
+            border-bottom: 1px solid #cccccc;
+        }
+        
+        .search-section h3 {
+            font-size: 14px;
+            font-weight: normal;
+            margin-bottom: 15px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .search-box select,
+        .search-box input,
+        .search-box button {
+            padding: 10px;
+            border: 1px solid #000000;
+            background: #ffffff;
+            font-family: monospace;
             font-size: 14px;
         }
-
-        /* Tiny Admin Button - Top Right Corner */
-        .admin-tiny-btn {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            width: 40px;
-            height: 40px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        
+        .search-box select {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .search-box input {
+            flex: 3;
+            min-width: 200px;
+        }
+        
+        .search-box button {
+            background: #000000;
+            color: #ffffff;
             cursor: pointer;
-            transition: all 0.3s;
+        }
+        
+        .search-box button:hover {
+            background: #333333;
+        }
+        
+        .results-section {
+            padding: 20px;
+        }
+        
+        .results-section h3 {
+            font-size: 14px;
+            font-weight: normal;
+            margin-bottom: 15px;
+        }
+        
+        .results-table {
+            overflow-x: auto;
+            border: 1px solid #cccccc;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eeeeee;
+            border-right: 1px solid #eeeeee;
+        }
+        
+        th {
+            background: #f5f5f5;
+            font-weight: bold;
+            border-bottom: 2px solid #cccccc;
+        }
+        
+        td:last-child, th:last-child {
+            border-right: none;
+        }
+        
+        tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .pagination button {
+            padding: 5px 12px;
+            border: 1px solid #cccccc;
+            background: #ffffff;
+            font-family: monospace;
+            cursor: pointer;
+        }
+        
+        .pagination button:hover {
+            background: #eeeeee;
+        }
+        
+        .footer {
+            padding: 15px;
+            text-align: center;
+            border-top: 1px solid #cccccc;
+            font-size: 11px;
+            color: #666666;
+        }
+        
+        /* Admin Button - Very Tiny */
+        .admin-btn {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            border: 1px solid #999999;
+            background: #ffffff;
+            text-align: center;
+            line-height: 28px;
+            cursor: pointer;
+            font-size: 14px;
             z-index: 999;
-            font-size: 20px;
-            backdrop-filter: blur(5px);
         }
-
-        .admin-tiny-btn:hover {
-            background: rgba(0,0,0,0.6);
-            transform: scale(1.05);
+        
+        .admin-btn:hover {
+            background: #eeeeee;
         }
-
-        /* Admin Modal */
-        .admin-modal {
+        
+        /* Modal */
+        .modal {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 10000;
-            justify-content: center;
-            align-items: center;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
         }
-
-        .admin-modal.show {
-            display: flex;
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 450px;
+            background: #ffffff;
+            border: 2px solid #000000;
+            padding: 20px;
         }
-
-        .admin-modal-content {
-            background: white;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 25px;
-            position: relative;
-        }
-
-        .admin-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+        
+        .modal-header {
+            border-bottom: 1px solid #cccccc;
             padding-bottom: 10px;
-            border-bottom: 2px solid #667eea;
+            margin-bottom: 15px;
         }
-
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #999;
-        }
-
-        .login-form input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 2px solid #ddd;
-            border-radius: 8px;
+        
+        .modal-header h3 {
             font-size: 16px;
+            font-weight: normal;
         }
-
-        .login-form button {
+        
+        .modal input {
             width: 100%;
-            padding: 12px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #cccccc;
+            font-family: monospace;
+        }
+        
+        .modal button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #000000;
+            background: #ffffff;
+            font-family: monospace;
             cursor: pointer;
         }
-
+        
+        .modal button:hover {
+            background: #f0f0f0;
+        }
+        
         .admin-panel {
             display: none;
         }
-
-        .admin-panel.show {
-            display: block;
+        
+        .admin-panel hr {
+            margin: 15px 0;
+            border: none;
+            border-top: 1px solid #cccccc;
         }
-
-        .stat-item {
-            background: #f8f9fa;
-            padding: 10px;
-            margin: 8px 0;
-            border-radius: 8px;
+        
+        .stat-row {
             display: flex;
             justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eeeeee;
         }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
+        
+        .btn-start {
+            background: #000000 !important;
+            color: #ffffff !important;
+        }
+        
+        .btn-stop {
+            background: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #000000 !important;
+        }
+        
+        .close-modal {
+            float: right;
             cursor: pointer;
+            font-size: 20px;
         }
-
-        .btn-start { background: #28a745; color: white; }
-        .btn-stop { background: #dc3545; color: white; }
-        .btn-download { background: #17a2b8; color: white; }
-        .btn-reset { background: #ffc107; color: #333; }
-
-        .range-input {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0;
-        }
-
-        .range-input input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        hr {
-            margin: 15px 0;
-        }
-
-        /* Public Search Section */
-        .search-section {
-            padding: 25px;
-            background: white;
-        }
-
-        .search-box {
-            display: flex;
-            gap: 15px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-
-        .search-box input {
-            flex: 2;
-            padding: 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 16px;
-        }
-
-        .search-box select {
-            flex: 1;
-            padding: 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 14px;
-            background: white;
-        }
-
-        .search-box button {
-            padding: 14px 30px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .stats-public {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin: 20px 0;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .stat-card .value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .stat-card .label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .results-table {
-            overflow-x: auto;
-            margin-top: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 13px;
-        }
-
-        th {
-            background: #667eea;
-            color: white;
-            position: sticky;
-            top: 0;
-        }
-
-        tr:hover {
-            background: #f8f9fa;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .pagination button {
-            padding: 8px 15px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 15px;
-            background: #f8f9fa;
-            font-size: 11px;
-            color: #999;
-        }
-
-        @media (max-width: 768px) {
-            .stats-public {
+        
+        @media (max-width: 700px) {
+            .stats {
                 grid-template-columns: repeat(2, 1fr);
             }
-            .search-box {
-                flex-direction: column;
+            .stat-card {
+                border-right: none;
+                border-bottom: 1px solid #cccccc;
+            }
+            .modal-content {
+                width: 90%;
             }
         }
     </style>
 </head>
 <body>
 
-<!-- Tiny Admin Button (Top Right Corner - Very Small) -->
-<div class="admin-tiny-btn" id="adminBtn">
-    🔐
-</div>
+<!-- Tiny Admin Button -->
+<div class="admin-btn" id="adminBtn">[A]</div>
 
-<!-- Admin Modal (Password Protected) -->
-<div id="adminModal" class="admin-modal">
-    <div class="admin-modal-content">
-        <div class="admin-modal-header">
-            <h3>🔐 Admin Control Panel</h3>
-            <button class="close-modal" id="closeModal">&times;</button>
+<!-- Admin Modal -->
+<div id="adminModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="close-modal" id="closeModal">&times;</span>
+            <h3>ADMIN ACCESS</h3>
         </div>
         
-        <!-- Login Form -->
-        <div id="loginForm" class="login-form">
-            <input type="password" id="adminPassword" placeholder="Enter Admin Password">
-            <button id="loginBtn">Login</button>
-            <p style="font-size: 12px; color: #999; margin-top: 10px;">Authorized access only</p>
+        <div id="loginDiv">
+            <input type="password" id="adminPassword" placeholder="Enter Password">
+            <button id="loginBtn">LOGIN</button>
         </div>
         
-        <!-- Admin Panel (Hidden until login) -->
-        <div id="adminPanelContent" class="admin-panel">
-            <h4>📊 Scanner Status</h4>
-            <div class="stat-item"><span>🟢 Status:</span><span id="adminScanStatus">Loading...</span></div>
-            <div class="stat-item"><span>📊 Current ID:</span><span id="adminCurrentId">-</span></div>
-            <div class="stat-item"><span>✅ Workers Found:</span><span id="adminTotalFound">0</span></div>
-            <div class="stat-item"><span>📈 Scanned:</span><span id="adminScannedCount">0</span></div>
-            <div class="stat-item"><span>📊 Progress:</span><span id="adminProgress">0%</span></div>
-            
-            <hr>
-            <h4>🎮 Controls</h4>
-            <button class="btn btn-start" id="adminStartBtn">▶️ Start Scan</button>
-            <button class="btn btn-stop" id="adminStopBtn">⏹️ Stop Scan</button>
-            
-            <hr>
-            <h4>📥 Download Data</h4>
-            <button class="btn btn-download" id="adminDownloadCSV">📥 Download CSV</button>
-            <button class="btn btn-download" id="adminDownloadJSON">📥 Download JSON</button>
-            
-            <hr>
-            <h4>⚙️ Scan Range Settings</h4>
-            <div class="range-input">
-                <input type="number" id="adminStartId" placeholder="Start ID">
-                <input type="number" id="adminEndId" placeholder="End ID">
+        <div id="adminDiv" class="admin-panel">
+            <div class="stat-row">
+                <span>SCANNER STATUS:</span>
+                <span id="adminStatus">-</span>
             </div>
-            <button class="btn" id="adminUpdateRange" style="background:#28a745;">Update Range & Restart</button>
+            <div class="stat-row">
+                <span>CURRENT ID:</span>
+                <span id="adminCurrentId">-</span>
+            </div>
+            <div class="stat-row">
+                <span>WORKERS FOUND:</span>
+                <span id="adminTotalFound">0</span>
+            </div>
+            <div class="stat-row">
+                <span>SCANNED:</span>
+                <span id="adminScanned">0</span>
+            </div>
+            <div class="stat-row">
+                <span>PROGRESS:</span>
+                <span id="adminProgress">0%</span>
+            </div>
             
             <hr>
-            <button class="btn btn-reset" id="adminResetData" style="background:#dc3545; color:white;">🗑️ Reset All Data</button>
-            <button class="btn" id="adminLogout" style="background:#6c757d;">🚪 Logout</button>
+            
+            <button id="startScanBtn" class="btn-start">[ START SCAN ]</button>
+            <button id="stopScanBtn" class="btn-stop">[ STOP SCAN ]</button>
+            
+            <hr>
+            
+            <button id="downloadCSVBtn">[ DOWNLOAD CSV ]</button>
+            
+            <hr>
+            
+            <label>START ID:</label>
+            <input type="number" id="rangeStart" placeholder="Start ID">
+            <label>END ID:</label>
+            <input type="number" id="rangeEnd" placeholder="End ID">
+            <button id="updateRangeBtn">[ UPDATE RANGE ]</button>
+            
+            <hr>
+            
+            <button id="logoutBtn">[ LOGOUT ]</button>
         </div>
     </div>
 </div>
 
-<!-- Public Dashboard -->
+<!-- Main Container -->
 <div class="container">
     <div class="header">
-        <h1>🔍 BOCW Worker Search Portal</h1>
-        <p>Search any worker by ID, Aadhaar, Registration Number, Name or Mobile</p>
+        <h1>BOCW WORKER DATA PORTAL</h1>
+        <p>Search by ID | Aadhaar | Registration No | Name</p>
     </div>
-
-    <div class="search-section">
-        <!-- Public Stats -->
-        <div class="stats-public">
-            <div class="stat-card">
-                <div class="value" id="publicTotalFound">0</div>
-                <div class="label">Total Workers in Database</div>
-            </div>
-            <div class="stat-card">
-                <div class="value" id="publicLastUpdate">-</div>
-                <div class="label">Last Update</div>
-            </div>
-            <div class="stat-card">
-                <div class="value" id="publicRange">-</div>
-                <div class="label">Scan Range</div>
-            </div>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value" id="publicTotal">0</div>
+            <div class="stat-label">TOTAL WORKERS</div>
         </div>
-
-        <!-- Search Box -->
+        <div class="stat-card">
+            <div class="stat-value" id="publicRange">-</div>
+            <div class="stat-label">SCAN RANGE</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="publicCurrent">-</div>
+            <div class="stat-label">CURRENT ID</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="publicProgress">0%</div>
+            <div class="stat-label">PROGRESS</div>
+        </div>
+    </div>
+    
+    <div class="search-section">
+        <h3>SEARCH WORKER</h3>
         <div class="search-box">
             <select id="searchType">
-                <option value="id">🔢 User ID</option>
-                <option value="aadhaar">🆔 Aadhaar Number</option>
-                <option value="regNo">📋 Registration No</option>
-                <option value="name">👤 Name</option>
-                <option value="mobile">📱 Mobile Number</option>
+                <option value="id">USER ID</option>
+                <option value="aadhaar">AADHAAR NUMBER</option>
+                <option value="regNo">REGISTRATION NO</option>
+                <option value="name">NAME</option>
+                <option value="mobile">MOBILE NO</option>
             </select>
             <input type="text" id="searchValue" placeholder="Enter value to search...">
-            <button id="searchBtn">🔎 Search Worker</button>
-            <button id="resetBtn" style="background:#6c757d;">🔄 Reset</button>
+            <button id="searchBtn">SEARCH</button>
+            <button id="resetBtn" style="background:#f0f0f0; color:#000;">RESET</button>
         </div>
-
-        <!-- Results Table -->
+    </div>
+    
+    <div class="results-section">
+        <h3>WORKER DETAILS</h3>
         <div class="results-table">
             <table id="dataTable">
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Name</th>
-                        <th>Father/Husband</th>
-                        <th>Aadhaar</th>
-                        <th>Mobile</th>
-                        <th>Reg No</th>
-                        <th>District</th>
+                        <th>NAME</th>
+                        <th>FATHER/HUSBAND</th>
+                        <th>AADHAAR</th>
+                        <th>MOBILE</th>
+                        <th>REG NO</th>
+                        <th>DISTRICT</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="7">Loading data... Please wait</td></tr>
+                    <tr><td colspan="7">[ LOADING DATA... ]</td></tr>
                 </tbody>
             </table>
             <div class="pagination" id="pagination"></div>
         </div>
     </div>
-
+    
     <div class="footer">
-        🏗️ Bihar Building & Other Construction Workers Board | Data Last Updated: Real-time
+        BOCW BIHAR BOARD | DATA UPDATES IN REAL TIME
     </div>
 </div>
 
 <script>
-    // ========== CONFIGURATION ==========
-    const ADMIN_PASSWORD = "8809219140";
+    const PASSWORD = "8809219140";
     let allWorkers = [];
     let currentPage = 1;
     const itemsPerPage = 50;
-    let isAdminLoggedIn = false;
-
-    // ========== DOM ELEMENTS ==========
+    
+    // DOM Elements
     const adminBtn = document.getElementById('adminBtn');
     const adminModal = document.getElementById('adminModal');
     const closeModal = document.getElementById('closeModal');
-    const loginForm = document.getElementById('loginForm');
-    const adminPanelContent = document.getElementById('adminPanelContent');
+    const loginDiv = document.getElementById('loginDiv');
+    const adminDiv = document.getElementById('adminDiv');
     const adminPassword = document.getElementById('adminPassword');
     const loginBtn = document.getElementById('loginBtn');
-
-    // Public elements
-    const publicTotalFound = document.getElementById('publicTotalFound');
-    const publicLastUpdate = document.getElementById('publicLastUpdate');
+    
+    // Public Elements
+    const publicTotal = document.getElementById('publicTotal');
     const publicRange = document.getElementById('publicRange');
+    const publicCurrent = document.getElementById('publicCurrent');
+    const publicProgress = document.getElementById('publicProgress');
     const tableBody = document.getElementById('tableBody');
     const searchType = document.getElementById('searchType');
     const searchValue = document.getElementById('searchValue');
     const searchBtn = document.getElementById('searchBtn');
     const resetBtn = document.getElementById('resetBtn');
-
-    // ========== OPEN/CLOSE MODAL ==========
-    adminBtn.onclick = () => adminModal.classList.add('show');
-    closeModal.onclick = () => {
-        adminModal.classList.remove('show');
-        if (!isAdminLoggedIn) {
-            loginForm.style.display = 'block';
-            adminPanelContent.classList.remove('show');
-        }
-    };
-
-    // ========== ADMIN LOGIN ==========
+    
+    // Modal Open/Close
+    adminBtn.onclick = () => { adminModal.style.display = 'block'; };
+    closeModal.onclick = () => { adminModal.style.display = 'none'; };
+    window.onclick = (e) => { if(e.target == adminModal) adminModal.style.display = 'none'; };
+    
+    // Admin Login
     loginBtn.onclick = () => {
-        if (adminPassword.value === ADMIN_PASSWORD) {
-            isAdminLoggedIn = true;
-            loginForm.style.display = 'none';
-            adminPanelContent.classList.add('show');
+        if(adminPassword.value === PASSWORD) {
+            loginDiv.style.display = 'none';
+            adminDiv.style.display = 'block';
             loadAdminStatus();
-            startAdminRefresh();
+            setInterval(loadAdminStatus, 3000);
         } else {
-            alert('Wrong Password!');
+            alert('WRONG PASSWORD');
         }
     };
-
-    // ========== FETCH PUBLIC DATA ==========
-    async function fetchPublicData() {
+    
+    // Load Public Data
+    async function loadPublicData() {
         try {
             const res = await fetch('/api/data?t=' + Date.now());
-            if (res.ok) {
+            if(res.ok) {
                 allWorkers = await res.json();
-                publicTotalFound.innerText = allWorkers.length.toLocaleString();
-                publicLastUpdate.innerText = new Date().toLocaleTimeString();
+                publicTotal.innerText = allWorkers.length;
                 displayTable();
             }
-        } catch(e) { console.log('Error fetching data'); }
+        } catch(e) { console.log('Data fetch error'); }
     }
-
-    async function fetchPublicStatus() {
+    
+    async function loadPublicStatus() {
         try {
             const res = await fetch('/api/status?t=' + Date.now());
-            if (res.ok) {
+            if(res.ok) {
                 const data = await res.json();
-                publicRange.innerText = `${data.start_id?.toLocaleString() || '?'} - ${data.end_id?.toLocaleString() || '?'}`;
+                publicRange.innerText = (data.start_id || '?') + ' - ' + (data.end_id || '?');
+                publicCurrent.innerText = (data.current_id || '-').toLocaleString();
+                publicProgress.innerText = (data.progress || 0) + '%';
             }
         } catch(e) {}
     }
-
+    
     function displayTable(filteredData = null) {
         const data = filteredData || allWorkers;
         
-        if (data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7">No data available. Scanner is running in background.八</td></tr>';
+        if(data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7">[ NO DATA YET. SCANNER IS RUNNING... ]</td></tr>';
             document.getElementById('pagination').innerHTML = '';
             return;
         }
@@ -525,8 +526,8 @@
         tableBody.innerHTML = pageData.map(w => `
             <tr>
                 <td>${w.id || '-'}</td>
-                <td>${escapeHtml(w.name || '-')}</td>
-                <td>${escapeHtml(w.father || '-')}</td>
+                <td>${(w.name || '-').substring(0, 50)}</td>
+                <td>${(w.father || '-').substring(0, 40)}</td>
                 <td>${w.aadhaar || '-'}</td>
                 <td>${w.mobile || '-'}</td>
                 <td>${w.regNo || '-'}</td>
@@ -536,139 +537,105 @@
         
         const totalPages = Math.ceil(data.length / itemsPerPage);
         let paginationHtml = '';
-        for (let i = 1; i <= Math.min(totalPages, 10); i++) {
-            paginationHtml += `<button onclick="goToPage(${i})" ${i === currentPage ? 'style="background:#764ba2;"' : ''}>${i}</button>`;
+        for(let i = 1; i <= Math.min(totalPages, 10); i++) {
+            paginationHtml += `<button onclick="goToPage(${i})" ${i === currentPage ? 'style="background:#000; color:#fff;"' : ''}>${i}</button>`;
         }
         document.getElementById('pagination').innerHTML = paginationHtml;
     }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
+    
     function searchWorker() {
         const type = searchType.value;
         const value = searchValue.value.trim().toLowerCase();
         
-        if (!value) {
-            displayTable();
-            return;
-        }
+        if(!value) { displayTable(); return; }
         
         let filtered = allWorkers.filter(w => {
-            if (type === 'id') return w.id == value;
-            if (type === 'aadhaar') return w.aadhaar && w.aadhaar.includes(value);
-            if (type === 'regNo') return w.regNo && w.regNo.toLowerCase().includes(value);
-            if (type === 'name') return w.name && w.name.toLowerCase().includes(value);
-            if (type === 'mobile') return w.mobile && w.mobile.includes(value);
+            if(type === 'id') return w.id == value;
+            if(type === 'aadhaar') return w.aadhaar && w.aadhaar.includes(value);
+            if(type === 'regNo') return w.regNo && w.regNo.toLowerCase().includes(value);
+            if(type === 'name') return w.name && w.name.toLowerCase().includes(value);
+            if(type === 'mobile') return w.mobile && w.mobile.includes(value);
             return false;
         });
         
         currentPage = 1;
         displayTable(filtered);
     }
-
+    
     function resetSearch() {
         searchValue.value = '';
         displayTable();
     }
-
+    
     function goToPage(page) {
         currentPage = page;
         displayTable();
     }
-
-    // ========== ADMIN FUNCTIONS ==========
-    let adminRefreshInterval = null;
-
+    
+    // Admin Functions
     async function loadAdminStatus() {
         try {
             const res = await fetch('/api/status?t=' + Date.now());
             const data = await res.json();
-            document.getElementById('adminScanStatus').innerHTML = data.is_running ? '🟢 RUNNING' : '🔴 STOPPED';
-            document.getElementById('adminCurrentId').innerHTML = data.current_id?.toLocaleString() || '-';
-            document.getElementById('adminTotalFound').innerHTML = data.total_found?.toLocaleString() || '0';
-            document.getElementById('adminScannedCount').innerHTML = data.scanned_count?.toLocaleString() || '0';
+            document.getElementById('adminStatus').innerHTML = data.is_running ? '[ RUNNING ]' : '[ STOPPED ]';
+            document.getElementById('adminCurrentId').innerHTML = (data.current_id || '-').toLocaleString();
+            document.getElementById('adminTotalFound').innerHTML = (data.total_found || 0).toLocaleString();
+            document.getElementById('adminScanned').innerHTML = (data.scanned_count || 0).toLocaleString();
             document.getElementById('adminProgress').innerHTML = (data.progress || 0) + '%';
-            document.getElementById('adminStartId').value = data.start_id || '';
-            document.getElementById('adminEndId').value = data.end_id || '';
+            document.getElementById('rangeStart').value = data.start_id || '';
+            document.getElementById('rangeEnd').value = data.end_id || '';
         } catch(e) {}
     }
-
-    function startAdminRefresh() {
-        if (adminRefreshInterval) clearInterval(adminRefreshInterval);
-        adminRefreshInterval = setInterval(loadAdminStatus, 3000);
-        loadAdminStatus();
-    }
-
+    
     // Admin API Calls
-    document.getElementById('adminStartBtn')?.addEventListener('click', async () => {
+    document.getElementById('startScanBtn')?.addEventListener('click', async () => {
         await fetch('/api/start', { method: 'POST' });
         loadAdminStatus();
     });
-
-    document.getElementById('adminStopBtn')?.addEventListener('click', async () => {
+    
+    document.getElementById('stopScanBtn')?.addEventListener('click', async () => {
         await fetch('/api/stop', { method: 'POST' });
         loadAdminStatus();
     });
-
-    document.getElementById('adminDownloadCSV')?.addEventListener('click', () => {
+    
+    document.getElementById('downloadCSVBtn')?.addEventListener('click', () => {
         window.open('/api/download/csv', '_blank');
     });
-
-    document.getElementById('adminDownloadJSON')?.addEventListener('click', () => {
-        window.open('/api/download/json', '_blank');
-    });
-
-    document.getElementById('adminUpdateRange')?.addEventListener('click', async () => {
-        const startId = parseInt(document.getElementById('adminStartId').value);
-        const endId = parseInt(document.getElementById('adminEndId').value);
-        if (startId && endId && startId < endId) {
+    
+    document.getElementById('updateRangeBtn')?.addEventListener('click', async () => {
+        const start = parseInt(document.getElementById('rangeStart').value);
+        const end = parseInt(document.getElementById('rangeEnd').value);
+        if(start && end && start < end) {
             await fetch('/api/update_range', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ start_id: startId, end_id: endId })
+                body: JSON.stringify({ start_id: start, end_id: end })
             });
-            alert('Range updated! Scanner restarting...');
+            alert('RANGE UPDATED');
         } else {
-            alert('Enter valid range (Start < End)');
+            alert('INVALID RANGE');
         }
     });
-
-    document.getElementById('adminResetData')?.addEventListener('click', async () => {
-        if (confirm('⚠️ This will delete ALL collected data! Are you sure?')) {
-            await fetch('/api/reset_data', { method: 'POST' });
-            alert('Data reset!');
-            location.reload();
-        }
-    });
-
-    document.getElementById('adminLogout')?.addEventListener('click', () => {
-        isAdminLoggedIn = false;
-        loginForm.style.display = 'block';
-        adminPanelContent.classList.remove('show');
+    
+    document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        loginDiv.style.display = 'block';
+        adminDiv.style.display = 'none';
         adminPassword.value = '';
-        adminModal.classList.remove('show');
-        if (adminRefreshInterval) clearInterval(adminRefreshInterval);
+        adminModal.style.display = 'none';
     });
-
-    // ========== INIT ==========
-    fetchPublicData();
-    fetchPublicStatus();
-    setInterval(fetchPublicData, 15000);
-    setInterval(fetchPublicStatus, 10000);
-
+    
+    // Event Listeners
     searchBtn.onclick = searchWorker;
     resetBtn.onclick = resetSearch;
     searchValue.addEventListener('keypress', (e) => { if(e.key === 'Enter') searchWorker(); });
-
+    
     window.goToPage = goToPage;
+    
+    // Auto Refresh
+    loadPublicData();
+    loadPublicStatus();
+    setInterval(loadPublicData, 15000);
+    setInterval(loadPublicStatus, 5000);
 </script>
 </body>
 </html>
