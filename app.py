@@ -19,7 +19,7 @@ MAX_RETRIES = 2
 ADMIN_PASSWORD = "8809219140"
 
 # ========== GLOBAL VARIABLES ==========
-all_workers = []          # Permanent storage - kabhi delete nahi hoga
+all_workers = []          # Permanent storage
 failed_ids = []
 retry_success_ids = []
 scanned_count = 0
@@ -32,7 +32,7 @@ DATA_FILE = 'workers_data.json'
 STATUS_FILE = 'scan_status.json'
 
 def save_data():
-    """Permanently save data - kabhi delete nahi hoga stop/start se"""
+    """Permanently save data"""
     try:
         with open(DATA_FILE, 'w') as f:
             json.dump({
@@ -62,7 +62,7 @@ def save_data():
         print(f"Error saving data: {e}")
 
 def load_data():
-    """Load previously saved data - permanent storage"""
+    """Load previously saved data"""
     global all_workers, failed_ids, retry_success_ids, scanned_count, current_id
     try:
         if os.path.exists(DATA_FILE):
@@ -74,96 +74,127 @@ def load_data():
                 scanned_count = data.get('scanned', 0)
                 current_id = data.get('current_id', START_ID)
             print(f"✅ Loaded {len(all_workers)} workers from permanent storage")
-            print(f"📊 Current ID: {current_id}, Scanned: {scanned_count}")
         else:
             print("📁 No existing data file, starting fresh")
     except Exception as e:
         print(f"Error loading data: {e}")
 
 def fetch_worker(worker_id, attempt=1):
-    """Fetch worker data with 2 times retry"""
+    """Fetch worker data with 2 times retry - FIXED VERSION"""
     url = f"https://bocwboard.bihar.gov.in/api/workers/generalInfoUserView/{worker_id}"
+    
     try:
-        response = requests.get(url, timeout=15, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        print(f"🌐 Fetching URL: {url}")
+        response = requests.get(url, timeout=20, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://bocwboard.bihar.gov.in/'
         })
         
-        if response.status_code == 200:
-            data = response.json()
-            if data and data.get('applicantName'):
-                return {
-                    'id': worker_id,
-                    'name': data.get('applicantName', 'N/A'),
-                    'father': data.get('fatherHusband', 'N/A'),
-                    'aadhaar': data.get('aadhaarCardNumber', 'N/A'),
-                    'mobile': data.get('mobileNo', 'N/A'),
-                    'regNo': data.get('registrationNo', 'N/A'),
-                    'district': data.get('districtEnglish', 'N/A'),
-                    'address': (data.get('permanentAddress', 'N/A') or 'N/A').replace('\n', ' '),
-                    'status': data.get('formNumber', 'Active'),
-                    'fetch_time': datetime.now().isoformat()
-                }
+        print(f"📡 Response Status: {response.status_code} for ID {worker_id}")
         
-        # Retry logic - 2 times only
-        if attempt < MAX_RETRIES:
-            print(f"🔄 Retry {attempt}/{MAX_RETRIES} for ID {worker_id}")
-            time.sleep(2)
-            return fetch_worker(worker_id, attempt + 1)
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                print(f"📦 Response data keys: {data.keys() if data else 'None'}")
+                
+                # Check multiple possible field names
+                applicant_name = data.get('applicantName') or data.get('applicant_name') or data.get('name') or data.get('workerName')
+                
+                if applicant_name:
+                    worker_data = {
+                        'id': worker_id,
+                        'name': applicant_name,
+                        'father': data.get('fatherHusband') or data.get('father_name') or data.get('fatherName') or 'N/A',
+                        'aadhaar': data.get('aadhaarCardNumber') or data.get('aadhaar_number') or data.get('aadhaarNo') or 'N/A',
+                        'mobile': data.get('mobileNo') or data.get('mobile_number') or data.get('mobile') or 'N/A',
+                        'regNo': data.get('registrationNo') or data.get('registration_number') or data.get('regNo') or 'N/A',
+                        'district': data.get('districtEnglish') or data.get('district') or data.get('district_name') or 'N/A',
+                        'address': (data.get('permanentAddress') or data.get('address') or 'N/A').replace('\n', ' '),
+                        'status': data.get('formNumber') or data.get('status') or 'Active',
+                        'fetch_time': datetime.now().isoformat()
+                    }
+                    print(f"✅ SUCCESS: Found worker - ID: {worker_id}, Name: {worker_data['name']}")
+                    return worker_data
+                else:
+                    print(f"⚠️ No applicantName found in response for ID {worker_id}")
+                    print(f"Response content: {str(data)[:200]}...")
+                    
+            except json.JSONDecodeError as e:
+                print(f"❌ JSON decode error for ID {worker_id}: {e}")
+        else:
+            print(f"❌ HTTP {response.status_code} for ID {worker_id}")
             
+    except requests.exceptions.Timeout:
+        print(f"⏰ Timeout for ID {worker_id}")
+    except requests.exceptions.ConnectionError:
+        print(f"🔌 Connection error for ID {worker_id}")
     except Exception as e:
-        print(f"Error fetching ID {worker_id}: {e}")
-        if attempt < MAX_RETRIES:
-            time.sleep(2)
-            return fetch_worker(worker_id, attempt + 1)
+        print(f"❌ Unexpected error for ID {worker_id}: {e}")
     
+    # Retry logic
+    if attempt < MAX_RETRIES:
+        print(f"🔄 Retry {attempt}/{MAX_RETRIES} for ID {worker_id} after 3 seconds...")
+        time.sleep(3)
+        return fetch_worker(worker_id, attempt + 1)
+    
+    print(f"❌ FAILED: ID {worker_id} after {MAX_RETRIES} attempts")
     return None
 
 def background_scanner():
     """Main scanner function - runs continuously"""
     global current_id, all_workers, failed_ids, retry_success_ids, scanned_count, is_running
     
-    print(f"🚀 ========== SCANNER STARTED ==========")
-    print(f"📊 Range: {START_ID} to {END_ID}")
+    print(f"\n{'='*60}")
+    print(f"🚀 SCANNER STARTED")
+    print(f"{'='*60}")
+    print(f"📊 Range: {START_ID:,} to {END_ID:,}")
     print(f"⚡ Batch Size: {BATCH_SIZE}, Max Retries: {MAX_RETRIES}")
     print(f"💾 Existing data: {len(all_workers)} workers already saved")
+    print(f"{'='*60}\n")
+    
+    batch_count = 0
     
     while is_running and current_id <= END_ID:
-        # Process in batches of BATCH_SIZE
+        batch_count += 1
         batch_end = min(current_id + BATCH_SIZE - 1, END_ID)
-        print(f"\n📦 Processing batch: {current_id} to {batch_end}")
+        print(f"\n📦 BATCH #{batch_count}: IDs {current_id:,} to {batch_end:,}")
         
         for uid in range(current_id, batch_end + 1):
             if not is_running:
                 break
             
-            print(f"🔍 Scanning ID: {uid}")
+            print(f"\n🔍 Scanning ID: {uid:,}")
             worker = fetch_worker(uid)
             scanned_count += 1
             
             if worker:
                 all_workers.append(worker)
-                print(f"✅ Found: {worker['name']} (Total workers: {len(all_workers)})")
+                print(f"✅ TOTAL WORKERS NOW: {len(all_workers)}")
             else:
                 failed_ids.append(uid)
-                print(f"❌ Failed: {uid} (Will retry later)")
+                print(f"❌ Failed ID {uid} added to retry list")
             
             current_id = uid + 1
-            
-            # Save data after every successful scan (permanent storage)
-            save_data()
+            save_data()  # Save after each ID for persistence
         
-        # Small delay between batches
-        time.sleep(1)
+        # Delay between batches to avoid rate limiting
+        if is_running and current_id <= END_ID:
+            print(f"⏳ Batch complete. Waiting 2 seconds before next batch...")
+            time.sleep(2)
     
-    # Retry failed IDs after main scan completes
+    # Retry failed IDs
     if is_running and failed_ids:
-        print(f"\n🔄 ========== RETRYING {len(failed_ids)} FAILED IDs ==========")
-        still_failed = []
+        print(f"\n{'='*60}")
+        print(f"🔄 RETRYING {len(failed_ids)} FAILED IDs")
+        print(f"{'='*60}")
         
-        for uid in failed_ids:
+        still_failed = []
+        for idx, uid in enumerate(failed_ids):
             if not is_running:
                 break
-            print(f"🔄 Retrying ID {uid}")
+            print(f"\n🔄 Retrying ID {uid} ({idx+1}/{len(failed_ids)})")
             worker = fetch_worker(uid)
             if worker:
                 all_workers.append(worker)
@@ -173,16 +204,19 @@ def background_scanner():
             else:
                 still_failed.append(uid)
                 print(f"❌ Still failed: {uid}")
-            time.sleep(1)
+            time.sleep(2)
         
         failed_ids = still_failed
         save_data()
-        print(f"📊 Retry complete! Recovered: {len(retry_success_ids)}, Still failed: {len(failed_ids)}")
+        print(f"\n📊 Retry complete! Recovered: {len(retry_success_ids)}, Still failed: {len(failed_ids)}")
     
-    print(f"\n✅ ========== SCAN COMPLETE ==========")
-    print(f"📊 Total workers found: {len(all_workers)}")
-    print(f"📊 Total IDs scanned: {scanned_count}")
-    print(f"📊 Permanently failed: {len(failed_ids)}")
+    print(f"\n{'='*60}")
+    print(f"✅ SCAN COMPLETE")
+    print(f"{'='*60}")
+    print(f"📊 Total workers found: {len(all_workers):,}")
+    print(f"📊 Total IDs scanned: {scanned_count:,}")
+    print(f"📊 Permanently failed: {len(failed_ids):,}")
+    print(f"{'='*60}\n")
     
     is_running = False
     save_data()
@@ -229,7 +263,6 @@ ADMIN_PANEL_HTML = '''
         .btn-start { background: #28a745; color: white; }
         .btn-stop { background: #dc3545; color: white; }
         .btn-download { background: #17a2b8; color: white; }
-        .btn-clear { background: #6c757d; color: white; }
         .btn-logout { background: #667eea; color: white; }
         .status { background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 15px 0; text-align: center; }
         .status-running { color: green; font-weight: bold; }
@@ -262,7 +295,7 @@ ADMIN_PANEL_HTML = '''
         <button class="btn btn-stop" id="stopBtn">⏹️ STOP SCAN</button>
         
         <hr>
-        <h3>📥 Download Data (Permanent Storage)</h3>
+        <h3>📥 Download Data</h3>
         <button class="btn btn-download" id="downloadCSVBtn">📥 Download CSV</button>
         <button class="btn btn-download" id="downloadJSONBtn">📥 Download JSON</button>
         
@@ -339,7 +372,6 @@ ADMIN_PANEL_HTML = '''
 # ========== API ROUTES ==========
 @app.route('/')
 def home():
-    """Public page - only view, no controls"""
     try:
         with open('index.html', 'r') as f:
             return f.read()
@@ -371,9 +403,7 @@ def api_status():
         'retry_success': len(retry_success_ids),
         'scanned_count': scanned_count,
         'is_running': is_running,
-        'progress': round((current_id - START_ID) / (END_ID - START_ID) * 100, 2) if END_ID > START_ID else 0,
-        'start_id': START_ID,
-        'end_id': END_ID
+        'progress': round((current_id - START_ID) / (END_ID - START_ID) * 100, 2) if END_ID > START_ID else 0
     })
 
 @app.route('/api/data')
@@ -406,22 +436,14 @@ def api_update_range():
     new_end = data.get('end_id')
     
     if new_start and new_end and new_start < new_end:
-        # Stop current scan
         is_running = False
         time.sleep(1)
-        
-        # Update range but KEEP existing data (permanent)
         START_ID = new_start
         END_ID = new_end
         current_id = START_ID
-        # DON'T clear all_workers - data remains permanently
-        
         save_data()
-        
-        # Restart scan
         is_running = True
         threading.Thread(target=background_scanner).start()
-        
         return jsonify({'status': 'updated', 'workers_retained': len(all_workers)})
     return jsonify({'error': 'invalid range'}), 400
 
