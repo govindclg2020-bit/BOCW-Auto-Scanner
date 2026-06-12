@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: bocw-advanced-scanner
+    name: bocw-scanner
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
